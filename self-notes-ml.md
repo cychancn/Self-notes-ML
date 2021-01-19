@@ -305,5 +305,105 @@ Deep vs structured learning
 RNN, LSTM can be Deep
 
 HMM, CRF< Structured Perceptron/SVM considers the whole sequence, can explicitly consider label dependency and cost is the upper bound of error
-Solutions: Integrate both, use structured as the outer layer and then apply deep neural networks.
+Solutions: Integrate both, use structured as the outer layer and then apply deep neural networks layers.
 
+### Semi-supervised learning
+Different in training data:
+Supervised learning: {(x^r, y^hat^r)}_{r=1}^R
+Semi-supervised learning: {(x^r, y^hat^r)}_{r=1}^R, {x^u}_{u=R}^{R+U}, an additional set of unlabeled data
+If the unlabeled data is the testing data -> Transductive learning
+If the unlabeled data is not the testing data -> Inductive learning
+Reasons:
+Hard to collect labels of data
+
+Generative Model:
+Calculate posterior probability P_theta(C_1| x^u) using the origianl model theta (E step)
+Update model: (Update parameters u_1,sigma,P(C_1), u_2,...) (M step)
+P(C_1)= N_1 + (\sum_(x^u) P(C_1|x^u ))/N  
+mu^1 = 1/N_1 \sum_{x^r \in C_1} x^r + 1/ \sum_x^u P(C_1 | x^u) \sum_x^u P(C_1 | x^u)x^u
+
+Difference in likelihood functions:
+Labeled data has a closed-form solution
+log L(theta) = \sum_x^r log(P_theta(x^r, y^hat^r) 
+Unlabeled data do not, and is not convex, needs to be solved iteratively
+Intuition: Since the unlabeled data is also part of the sampled data, it must come from one of the classes
+
+Self training:
+Given labeled data set and unlabeled data set,
+train model from labeled data set, obtain model f*, apply model f* into unlabeled data set, then remove part of the pseudo-labeled unlabeled data set and include it as the labeled data set, repeat.
+
+log L(theta) = \sum_x^r log(P_theta(x^r, y^hat^r) + \sum_x^u log(P_theta(x^u )), where P_theta(x^u) = P_theta(x^u|C_1)P(C_1) + P_theta(x^u|C_2)P(C_2)
+Soft labels: label data with the model's confidence distribution (0.7,0.3)
+Hard labels: label data as strictly belonging to the class with the most highest confidence of the model (1,0)
+Must use hard labels, since soft labels is labeled as the same value under the output of the model, the error function will always be zero for these terms and there will be no progression
+
+Entropy-based regulation:
+Low-desnity distributions, its not too good to forcefully classify data, so we calculate entropy
+E(y^u) = -\sum_n y^u_n ln(y^u_n), where n is the number of classifications
+Update likelihood function
+L = \sum_x^r C(y^r, y^hat^r_) + lambda\sum_x^u E(y^u)
+
+Semi-supervised SVM:
+Enumerate all possible lables for the unlabeled data, find a boundary that can provide the largest margin and least error.
+
+Smoothness Assumptions:
+x is not uniform, if x^1 and x^2 are close in a high density region, y^hat^1 and y^hat^2 will be the same (Connected by a high-density connection)
+Cluster and then label (data must be clusterable), 
+Graph-based approach (construct a graph based on data points):
+Define simlarity between two data points s(x^i,x^j)
+Add edges: K nearest Neighbor, e-Neighborhood
+Edge weight is proportional to s(x^i,x^j)
+Uses Gaussian Radial Basis Function to evaluate closeness:
+d(x^i,x^j)= exp(-gamma ||x^i-x^j||^2) 
+Smoothness definition:
+S= 1/2 \sum_i,j w_i,j (y^i-y^j)^2 = y^T L y, L = D-U, where L = laplacian, D = total connection weights (diagonal matrix), U = connection weights(symmetric)
+
+Adding the new smoothness term into the loss function to implement regularization
+L = \sum_x^r C(y^r,y^hat^r) + lambda S 
+
+### Word Embedding
+Better Representation:
+1-of-N encoding -> word class -> word embedding
+Word embedding: machine learns the meaning of words from reading a lot of documents wihtout supervision, unsupervised learning.
+Problem: No specified output, only have inputs
+Auto-encoder does not work
+Solutions: Word can be understood by context
+Count based:
+If two words w_i, w_j co-occur, V(w_i) and V(w_j) would be close to each other
+V(w_i)*V(w_j), their inner product should be similar to N_{i,j} number of times w_i,w_j appears in the same document.
+
+Prediction based:
+Build a model with the input layer as 1-of-N encoding, output as probability for each word as the next word w_i. Take the input z into the first layer of the hidden input, as the word vector.
+It works since the feature space must be properly represented. 
+Problem: there is too many possibilities at the output layer if we only look at one word. (Too many words)
+Solution:
+Prediction-based Sharing Parameters
+Inputs will be several 1-of-N encoding of word w_{i-k}, then all multiplied by the same weight matrix W.
+Making w_i equals to w_j.
+Give w_i, w_j the same initilization, descent also in the direction in the other derivatives
+w_i^{t+1} = w_i^t - eta deltaC/deltaw_i - eta deltaC/deltaw_j (new term)
+w_j^{t+1} = w_j^t - eta deltaC/deltaw_j - eta deltaC/deltaw_i (new term)
+Training:
+minimize cross entropy of machine output against the real data
+CBOW model
+given w_{t-1},w_{t+1}, predict w_t
+Skip-gram
+given w_t, predict w_{t-1}, w_{t+1}
+
+Characteristics:
+Similar words have similar differences in their word vectors V(Germany) - V(Berlin) = V(Italy) - V(Rome),  can solve analogies V(Germany) = V(Berlin)-V(Rome)+V(Italy)
+
+Multi-language embedding
+Project data of words in different languages to the same space with the requirement that same words should have similar word vectors differences.
+When new words arrived, by applying the same transformation the machine can automatically find the relations between the new words in their different languages.
+
+Multi-domain Embedding
+First perform word embedding on words, then embedd images onto the same space with the requirement that the photos should stay near their corresponding word.
+When new photos arrived, by applying the same transformation the machine can find the suitable label for unseen photos.
+
+Document Embedding
+Semantic Embedding of bag of words/word sequence of documents, transforming into vectors with same length that represents the meaning of the word sequence
+Problem:
+Sequence is important, same bag-of-word may have different meanings. 
+Solution:
+New Models presented in new papers...
